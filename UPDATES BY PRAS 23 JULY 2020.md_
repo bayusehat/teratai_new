@@ -1,0 +1,262 @@
+models/Item_model.php
+---------------------
+1. fungsi cek_stok_habis() <-- tidak perlu menambahkan ke object apabila item tidak ada di daftar redline (tabel di depan hanya akan dijadikan Redline monitor)
+
+=====================
+
+controllers/Item.php
+--------------------
+1. Perbaiki typo: 
+$c->callbak_after_insert([$this,'creator_stock_opname']);
+$c->callbak_after_insert([$this,'editor_stock_opname']);
+
+2. function stok_gudang():
+unset_read, add, edit (stok gudang seharusnya tidak boleh dimodifikasi secara manual, hanya terpengaruh dari transaksi serta stock opname)
+
+3. function search_item() <-- Tambahkan addslashes pada $a->nama_item karena ada item yang menggunakan tanda petik di database real (contoh: Pipa Gas 8" 40x65)
+
+====================
+
+controllers/Master.php
+----------------------
+1. Tambahkan unset_read() di semua master (note: ke depannya apabila develop master, jangan lupa di unset_read() karena action read pasti tidak diperlukan)
+
+2. function logistik():
+unset_texteditor('alamat_logistik'); <-- supaya textbox alamat logistik menjadi polos, tidak perlu text editor yang malah membuat hasilnya jadi HTML di database
+
+3. function customer():
+unset_texteditor('alamat_customer'); <-- supaya textbox alamat logistik menjadi polos, tidak perlu text editor yang malah membuat hasilnya jadi HTML di database
+
+4. function supplier():
+unset_texteditor('alamat_supplier'); <-- supaya textbox alamat logistik menjadi polos, tidak perlu text editor yang malah membuat hasilnya jadi HTML di database
+
+======================
+
+controllers/Retur_pembelian.php
+-------------------------------
+1. function list_retur() <-- rename menjadi list(), karena di database menu (yang ada di server), routenya adalah retur_pembelian/list.
+
+2. function create() <-- ditambahkan pengecekan apakah sudah ada GI atau belum, jika belum, redirect dan throw error message, karena gudang harus sudah ada, dan gudang setnya via GI, sehingga kalau belum ada GI, berarti belum ada gudang, dan stok flow retur tidak bekerja dengan baik
+
+3. function create() <-- ubah object $supplier menjadi id dan nama supplier dari PO untuk passing ke view (pada view akan diubah menjadi readonly textbox dan hidden id), karena retur tidak perlu memilih supplier lagi, pasti suppliernya berasal dari supplier PO tersebut, dan tidak boleh diganti
+
+4. function edit() <-- ubah object $supplier menjadi id dan nama supplier dari retur tersebut, tidak boleh diubah2
+
+5. Action Nota Retur (load_paper) dicomment dulu sementara karena class Pdf / Dompdf masih bermasalah di environment server
+
+6. Pada datagrid / list, label display as "Approved_1" dan "Approval" telah diubah agar tidak membingungkan istilahnya. Tombol action untuk approve juga telah diganti labelnya menjadi "Klik untuk Approve"
+
+7. function insert() <-- Tambahkan query id_gudang dari GI sebagai id_gudang saat insert, abaikan input post gudang
+
+8. function update() <-- comment id_gudang, tidak perlu di update
+
+9. function approve_rp_action() <-- ditambahkan pengecekan apakah sebelumnya sudah terapprove atau belum, agar tidak sampai kedobelan
+
+10. function triggerStokPo() <-- penyimpanan stock gudang dan history stock terbalik! sudah diperbaiki, mohon ke depannya lebih diperhatikan lagi!
+
+controllers/Retur_penjualan.php
+-------------------------------
+1. function list_retur() <-- rename menjadi list(), karena di database menu (yang ada di server), routenya adalah retur_penjualan/list.
+
+2. function create() <-- ubah object $customer menjadi id dan nama customer dari SO untuk passing ke view (pada view akan diubah menjadi readonly textbox dan hidden id), karena retur tidak perlu memilih customer lagi, pasti customernya berasal dari customer SO tersebut, dan tidak boleh diganti. Ditambahkan juga handler untuk WALK IN.
+
+3. function create() <-- ubah object $gudang menjadi id dan nama gudang dari SO untuk passing ke view (pada view akan diubah menjadi readonly textbox dan hidden id), karena retur tidak perlu memilih gudang lagi, pasti gudangnya berasal dari gudang SO tersebut, dan tidak boleh diganti
+
+4. function edit() <-- tambahkan id_penjualan di object $retur untuk digunakan di tombol Kembali pada view retur_penjualan_edit
+
+5. function edit() <-- tambahkan a.catatan di object detail retur penjualan
+
+6. function edit() <-- ubah object $customer menjadi id dan nama customer dari retur tersebut, tidak boleh diubah2
+
+7. function edit() <-- ubah object $gudang menjadi id dan nama gudang dari retur tersebut, tidak boleh diubah2
+
+8. Pada datagrid / list, label display as "Approved_1" dan "Approval" telah diubah agar tidak membingungkan istilahnya. Tombol action untuk approve juga telah diganti labelnya menjadi "Klik untuk Approve"
+
+9. function approve_rp_action() <-- ditambahkan pengecekan apakah sebelumnya sudah terapprove atau belum, agar tidak sampai kedobelan
+
+10. function triggerStokSo() <-- penyimpanan history stock terbalik! sudah diperbaiki, mohon ke depannya lebih diperhatikan lagi!
+
+===============================
+
+controllers/Po.php
+------------------
+
+1. Action Nota Pembelian (load_paper) dicomment dulu sementara karena class Pdf / Dompdf masih bermasalah di environment server
+
+2. function purchase_order_insert() <-- hilangkan "required" untuk field "id_bank_account"
+
+3. Pada datagrid / list, label display as "Approved_1" dan "Approval" telah diubah agar tidak membingungkan istilahnya. Tombol action untuk approve juga telah diganti labelnya menjadi "Klik untuk Approve"
+
+4. fungsi callback delete <-- sementara di return false untuk mencegah stok kacau, cek instruksi di email
+
+==================
+
+controllers/Gi.php
+------------------
+
+1. function checkApproveComplete() <-- ditambahkan pengecekan apakah entry sudah ada di tb_stok_gudang, jika belum, lakukan insert. Karena posisi kemarin, hanya ada update, jadi jika belum ada entry nya, maka tidak ada yang terupdate, sehingga stok tidak benar
+
+2. function approve_gi_action() <-- ditambahkan pengecekan apakah sebelumnya sudah di approve, karena posisi kemarin, jika tombol approve ditekan berkali-kali, maka stok juga akan terupdate berkali-kali
+
+3. function goods_in_edit() <-- tambahkan approval_1 pada field yang diselect di $gi, agar tahu apakah GI ini sudah diapprove sebelumnya atau tidak
+
+4. function goods_in_edit() <-- ubah object $supplier menjadi id dan nama supplier dari retur tersebut, tidak boleh diubah2
+
+5. function goods_in_edit() <-- tambahkan object $gudang_selected untuk mengetahui id dan nama gudang dari GI tersebut, apabila sudah di approved_1, maka gudang tidak boleh diubah2
+
+6. Pada datagrid / list, label display as "Approved_1" dan "Approval" telah diubah agar tidak membingungkan istilahnya. Tombol action untuk approve juga telah diganti labelnya menjadi "Klik untuk Approve"
+
+7. fungsi callback delete <-- sementara di return false untuk mencegah stok kacau, cek instruksi di email
+
+==================
+
+controllers/So.php
+------------------
+1. fungsi callback delete <-- sementara di return false untuk mencegah stok kacau, cek instruksi di email
+
+2. fungsi create() <-- tambahkan supplier di query object $po
+
+3. fungsi insert() <-- throw error apabila gudang belum dipilih, karena gudang pada GI wajib ada
+
+4. fungsi insert() <-- abaikan input post supplier, cek dan throw error apabila memilih multiple PO dari supplier yang berbeda, lalu ambil id_supplier dari list PO
+
+==================
+
+controllers/Go.php
+------------------
+1. fungsi callback delete <-- sementara di return false untuk mencegah stok kacau, cek instruksi di email
+
+2. fungsi create() <-- tambahkan nama_gudang di query object $so
+
+3. fungsi insert() <-- abaikan input post gudang, cek dan throw error apabila memilih multiple SO dari gudang yang berbeda, lalu ambil id_gudang dari list SO
+
+4. fungsi insert() <-- ditambahkan pengecekan apakah entry sudah ada di tb_stok_gudang, jika belum, lakukan insert. Karena posisi kemarin, hanya ada update, jadi jika belum ada entry nya, maka tidak ada yang terupdate, sehingga stok tidak benar. Tidak apa-apa jika minus (menjual item yang tidak ada stok di gudang), tapi pada posisi sebelumnya, stok gudang tidak terpengaruh sama sekali oleh query update karena memang belum ada entrynya.
+
+==================
+
+views/dashboard.php
+-------------------
+1. Ubah judul menjadi "Stok Redline Monitor"
+
+===================
+
+views/transaksi/retur_pembelian_create.php
+------------------------------------------
+1. Pada tombol 'Kembali', route ke po/purchase_order, karena pembuatan retur adalah dari halaman tersebut, bukan dari list retur
+
+2. Ubah combobox / selectbox supplier menjadi hidden ID dan readonly textbox sesuai keterangan pada controller Retur_pembelian diatas
+
+3. Comment combobox / selectbox gudang, buat hidden dengan value 0 (nanti gudang akan diambil otomatis dari GI pada fungsi insert retur)
+
+4. Mengubah label status dari "APPROVED" menjadi "SELESAI", agar tidak ambigu dengan approval
+
+views/transaksi/retur_penjualan_create.php
+------------------------------------------
+1. Pada tombol 'Kembali', route ke so/sales_order, karena pembuatan retur adalah dari halaman tersebut, bukan dari list retur
+
+2. Ubah combobox / selectbox customer menjadi hidden ID dan readonly textbox sesuai keterangan pada controller Retur_penjualan diatas
+
+3. Ubah combobox / selectbox gudang menjadi hidden ID dan readonly textbox sesuai keterangan pada controller Retur_penjualan diatas
+
+4. Mengubah label status dari "APPROVED" menjadi "SELESAI", agar tidak ambigu dengan approval
+
+views/transaksi/retur_pembelian_edit.php
+----------------------------------------
+1. Pada tombol "Kembali", ubah route list_retur menjadi list, agar konsisten dengan yang lain
+
+2. Ubah combobox / selectbox supplier menjadi hidden ID dan readonly textbox sesuai keterangan pada controller Retur_pembelian diatas
+
+3. Comment combobox / selectbox gudang, buat hidden dengan value 0 (sementara dulu sambil konfirmasi dengan client)
+
+4. Mengubah label status dari "APPROVED" menjadi "SELESAI", agar tidak ambigu dengan approval
+
+views/transaksi/retur_penjualan_edit.php
+----------------------------------------
+1. Pada tombol "Kembali", ubah route list_retur menjadi list, agar konsisten dengan yang lain, dan ambil ID dari object $retur (sebelumnya $sp sehingga invalid object)
+
+2. Ubah combobox / selectbox customer menjadi hidden ID dan readonly textbox sesuai keterangan pada controller Retur_penjualan diatas
+
+3. Ubah combobox / selectbox gudang menjadi hidden ID dan readonly textbox sesuai keterangan pada controller Retur_penjualan diatas
+
+4. Value textbox catatan pada detail retur sebelumnya terset sebagai string "catatn", saat ini sudah diperbaiki dan diganti dengan $dp->catatan
+
+5. Mengubah label status dari "APPROVED" menjadi "SELESAI", agar tidak ambigu dengan approval
+
+===============================
+
+views/transaksi/retur_pembelian_edit.php
+----------------------------------------
+1. Ubah combobox / selectbox supplier menjadi hidden ID dan readonly textbox (tidak boleh diubah2)
+
+2. Tambahkan pengecekan, apabila status GI adalah approved, maka combobox / selectbox gudang menjadi hidden ID dan readonly textbox (tidak boleh diubah2)
+
+3. Tambahkan pengecekan, apabila status GI adalah approved, maka tombol Save hilang (tidak boleh diedit lagi)
+
+========================================
+
+views/item/create_mutasi.php
+----------------------------
+1. Tambahkan $('#suggestions').fadeOut(); dan $('#search').val("").focus(); pada addToTable(), karena sebelumnya tidak menutup dengan baik
+
+views/item/update_mutasi.php
+----------------------------
+1. Tambahkan $('#suggestions').fadeOut(); dan $('#search').val("").focus(); pada addToTable(), karena sebelumnya tidak menutup dengan baik
+
+============================
+
+views/report/goods_out_create.php
+---------------------------------
+1. Tambahkan tampilan kolom Gudang, hide sementara combobox Gudang (Karena tidak boleh multi gudang dalam 1 GO)
+
+views/report/goods_in_create.php
+---------------------------------
+1. Tambahkan tampilan kolom Supplier, hide sementara combobox Supplier (Karena tidak boleh multi supplier dalam 1 GO)
+
+============================
+
+views/report/goods_in_detail.php
+--------------------------------
+1. Memperbaiki conditional untuk tampilan status approval agar hanya memperhatian approval_1 saja
+
+================================
+
+views/report/purchase_order_create.php
+--------------------------------------
+1. Menyesuaikan field-field yang seharusnya tidak boleh diedit (subtotal, dll)
+
+2. Menyesuaikan javascript untuk perhitungan ulang total, subtotal, dan ppn
+
+3. Menambahkan version number pada transaksi.js agar ter-reload dengan baik
+
+4. Poin-poin diatas menyesuaikan dengan sales order yang sudah saya edit beberapa waktu lalu
+
+views/report/purchase_order_edit.php
+--------------------------------------
+1. Menyesuaikan field-field yang seharusnya tidak boleh diedit (subtotal, dll)
+
+2. Menyesuaikan javascript untuk perhitungan ulang total, subtotal, dan ppn
+
+3. Menambahkan version number pada transaksi.js agar ter-reload dengan baik
+
+4. Poin-poin diatas menyesuaikan dengan sales order yang sudah saya edit beberapa waktu lalu
+
+======================================
+
+assets/spada/js/transaksi.js
+----------------------------
+
+1. Memperbaiki nama variable untuk perhitungan PPn di PO create dan edit
+
+============================
+
+========
+DATABASE
+========
+
+Table: tb_retur_pembelian_detail
+-------------------------
+1. Tambahkan kolom "harga", karena dibutuhkan di controller, tapi belum diupdate di database. Ke depannya mohon list update jangan sampai ketinggalan jika ada perubahan di database (bisa sambil mencatat update ketika sedang dikerjakan agar tidak lupa)
+
+Table: tb_retur_penjualan_detail
+-------------------------
+1. Tambahkan kolom "harga", karena dibutuhkan di controller, tapi belum diupdate di database. Ke depannya mohon list update jangan sampai ketinggalan jika ada perubahan di database (bisa sambil mencatat update ketika sedang dikerjakan agar tidak lupa)
